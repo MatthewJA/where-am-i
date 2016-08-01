@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Where Am I?</title>
+</head>
+<body>
+
+<div id="content">Loading...</div>
+
+<script>
+
+// Wrap geolocation API with Promises.
+
+function getPosition() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject);
+  });
+}
+
+// Helpers.
+
+function latLon(position) {
+  return [position.coords.latitude, position.coords.longitude];
+}
+
+// Main.
+var content = document.getElementById('content');
+if ("geolocation" in navigator) {
+  getPosition().then(location => {
+    content.innerHTML = 'You are at: ' + latLon(location);
+  }).catch(err => {
+    content.innerHTML = 'Error getting location: ' + err.message;
+  });
+} else {
+  content.innerHTML = 'Your browser doesn\'t support geolocation.';
+}
+
+</script>
+</body>
+</html>
