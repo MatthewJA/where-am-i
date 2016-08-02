@@ -25,15 +25,69 @@ function latLon(position) {
 
 // Main.
 var content = document.getElementById('content');
-if ("geolocation" in navigator) {
-  getPosition().then(location => {
-    content.innerHTML = 'You are at: ' + latLon(location);
-  }).catch(err => {
-    content.innerHTML = 'Error getting location: ' + err.message;
+var coordinates = [];
+
+function inside(point, vs) {
+  // ray-casting algorithm based on
+  // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+  // taken from https://github.com/substack/point-in-polygon
+  // The MIT License (MIT)
+
+  // Copyright (c) 2016 James Halliday
+
+  // Permission is hereby granted, free of charge, to any person obtaining a copy
+  // of this software and associated documentation files (the "Software"), to deal
+  // in the Software without restriction, including without limitation the rights
+  // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  // copies of the Software, and to permit persons to whom the Software is
+  // furnished to do so, subject to the following conditions:
+
+  // The above copyright notice and this permission notice shall be included in all
+  // copies or substantial portions of the Software.
+
+  // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  // SOFTWARE.
+  var x = point[0], y = point[1];
+
+  var inside = false;
+  for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+      var xi = vs[i][0], yi = vs[i][1];
+      var xj = vs[j][0], yj = vs[j][1];
+
+      var intersect = ((yi > y) != (yj > y))
+          && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+  }
+  return inside;
+};
+
+fetch('coordinates_act_southport.json', {cache: 'force-cache'})
+  .then((response) => response.json())
+  .then((coordinates) => {
+    window.coordinates = coordinates;
+    return getPosition();
+  })
+  .then((location) => {
+    content.innerHTML = 'Looking up SA1...';
+    var lat = location.coords.latitude;
+    var lon = location.coords.longitude;
+    var found = false;
+    for (var i = 0; i < coordinates.length; i++) {
+      if (inside([lon, lat], coordinates[i].shape)) {
+        content.innerHTML = coordinates[i].record.toString() + lat + ',' + lon;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      content.innerHTML = 'Can\'t find SA1.';
+    }
   });
-} else {
-  content.innerHTML = 'Your browser doesn\'t support geolocation.';
-}
 
 </script>
 </body>
