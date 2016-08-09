@@ -158,9 +158,9 @@ function update(lat, lon) {
   var sa1;
   try {
     sa1 = getSA1(lat, lon);
-  } catch {
+  } catch (e) {
     content.innerHTML = 'Couldn\'t find location.';
-    return
+    throw e;
   }
 
   var name = sa1.record[4];
