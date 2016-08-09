@@ -2,12 +2,55 @@
 <html>
 <head>
   <title>Where Am I?</title>
+  <style type="text/css">
+    .shrink {
+      width: 0px !important;
+      height: 0px !important;
+      overflow: hidden;
+    }
+  </style>
 </head>
+
+<script type="text/javascript">
+  var host = 'matthewja.com';
+  if ((host == window.location.host) &&
+      (window.location.protocol != 'https:')) {
+    window.location.protocol = 'https';
+  }
+</script>
+
 <body>
 
 <div id="content">Loading...</div>
 
+<div class="shrink"><!-- <iframe id="tuneframe"
+        width="200"
+        height="200"
+        src="https://www.youtube.com/embed/gWTZbEbv2gs?Version=3&amp;loop=1&amp;autoplay=1&amp;playlist=gWTZbEbv2gs"
+        frameborder="0"
+        allowfullscreen="0"
+        autoplay="1"
+        loop="1">
+</iframe> --><div id="player"></div></div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
+
+// Globals.
+
+var content = document.getElementById('content');
+var tuneFrame = document.getElementById('tuneframe');
+var coordinates = [];
+var currentIndex = null;
+var tunes = [
+  'DJUxTo0tTOs',
+  'OqsgB2TZ9Ks',
+  'T8cLW0Lckhc',
+];
+var defaultTune = 'gWTZbEbv2gs';
+var maxIndex = tunes.length;
+var player;
 
 // Wrap geolocation API with Promises.
 
@@ -19,13 +62,13 @@ function getPosition() {
 
 // Helpers.
 
+function makeEmbedURL(video) {
+  return 'https://www.youtube.com/embed/' + video + '?Version=3&loop=1&autoplay=1&playlist=' + video;
+}
+
 function latLon(position) {
   return [position.coords.latitude, position.coords.longitude];
 }
-
-// Main.
-var content = document.getElementById('content');
-var coordinates = [];
 
 function inside(point, vs) {
   // ray-casting algorithm based on
@@ -64,29 +107,84 @@ function inside(point, vs) {
       if (intersect) inside = !inside;
   }
   return inside;
+}
+
+function hash(string) {
+  // http://stackoverflow.com/a/7616484/1105803
+  var hash = 0, i, chr, len;
+  if (string.length === 0) return hash;
+  for (i = 0, len = string.length; i < len; i++) {
+    chr = string.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return hash;
+}
+
+function getSA1(lat, lon) {
+  var found = false;
+  for (var i = 0; i < coordinates.length; i++) {
+    if (inside([lon, lat], coordinates[i].shape)) {
+      return coordinates[i];
+    }
+  }
+}
+
+function setTune(index) {
+  // tuneFrame.src = makeEmbedURL(tunes[index]);
+  player.loadVideoById(tunes[index]);
+}
+
+function update(lat, lon) {
+  var sa1 = getSA1(lat, lon);
+  var name = sa1.record[4];
+  sa1 = sa1.record[0]
+  var index = sa1 % maxIndex;
+  if (index !== currentIndex) {
+    currentIndex = index;
+    setTune(index);
+  }
+  content.innerHTML = 'Found location: ' + name;
+}
+
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('player', {
+    height: '390',
+    width: '640',
+    videoId: defaultTune,
+    events: {
+      onReady: (event) => { event.target.playVideo(); },
+      // 'onStateChange': onPlayerStateChange
+    },
+    playerVars: {
+      autoplay: 1,
+      enablejsapi: 1,
+      loop: 1,
+      playlist: defaultTune,
+      origin: 'matthewja.com',
+    },
+  });
+}
+
+// Main.
+
+var positionOptions = {
+  timeout: 1000,
+  maximumAge: 60 * 1000,
 };
 
 fetch('coordinates_act_southport.json', {cache: 'force-cache'})
   .then((response) => response.json())
   .then((coordinates) => {
+    // Load all the area coordinates.
     window.coordinates = coordinates;
-    return getPosition();
+    // Set a callback for location.
+    navigator.geolocation.watchPosition((position) => {
+      update(position.coords.latitude, position.coords.longitude);
+    }, null, positionOptions);
   })
-  .then((location) => {
-    content.innerHTML = 'Looking up SA1...';
-    var lat = location.coords.latitude;
-    var lon = location.coords.longitude;
-    var found = false;
-    for (var i = 0; i < coordinates.length; i++) {
-      if (inside([lon, lat], coordinates[i].shape)) {
-        content.innerHTML = coordinates[i].record.toString() + lat + ',' + lon;
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      content.innerHTML = 'Can\'t find SA1.';
-    }
+  .catch((err) => {
+    content.innerHTML = 'Unhandled error: ' + err.message;
   });
 
 </script>
