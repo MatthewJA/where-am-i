@@ -146,6 +146,7 @@ function getSA1(lat, lon) {
       return coordinates[i];
     }
   }
+  throw Error('Couldn\'t find SA1.');
 }
 
 function setTune(index) {
@@ -154,7 +155,14 @@ function setTune(index) {
 }
 
 function update(lat, lon) {
-  var sa1 = getSA1(lat, lon);
+  var sa1;
+  try {
+    sa1 = getSA1(lat, lon);
+  } catch {
+    content.innerHTML = 'Couldn\'t find location.';
+    return
+  }
+
   var name = sa1.record[4];
   sa1 = sa1.record[0]
   var index = sa1 % maxIndex;
@@ -192,7 +200,7 @@ var positionOptions = {
   enableHighAccuracy: true,
 };
 
-fetch('coordinates_act_southport_pmq_esyd.json', {cache: 'force-cache'})
+fetch('coordinates_act_southport_pmq_esyd_isyd.json', {cache: 'force-cache'})
   .then((response) => response.json())
   .then((coordinates) => {
     // Load all the area coordinates.
